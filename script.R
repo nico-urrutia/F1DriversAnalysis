@@ -6,4 +6,14 @@ library(stringr)
 library(lubridate)
 library(tibble)
 
-drivers <- read.csv("F1Drivers_Dataset.csv")
+drivers <- read.csv(
+  file = "F1Drivers_Dataset.csv",
+  header = TRUE,
+  sep = ",",
+  dec = ".",
+  quote = "\"",
+  na.strings = c("", "NA"),
+  fileEncoding = "UTF-8"
+)
+
+print(drivers)
