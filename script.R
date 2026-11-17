@@ -15,5 +15,5 @@ drivers <- read.csv(
   na.strings = c("", "NA"),
   fileEncoding = "UTF-8"
 )
-
+drivers <- tibble(drivers)
 print(drivers)
