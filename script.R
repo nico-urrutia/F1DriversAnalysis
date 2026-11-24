@@ -1,14 +1,14 @@
 #F1 DRIVERS PROJECT
 #PARTICIPANTS: Asier Barreira, Aitor Espin and Nicolas Urrutia
 
-#install.packages(c("stringr","lubridate","tibble","dplyr","ggplot2"))
+#install.packages(c("stringr","tibble","dplyr","ggplot2"))   
 library(dplyr)
 library(stringr)
-library(lubridate)
 library(tibble)
 library(ggplot2)
 
-#2
+# 2. LOADING 
+file.exists("F1Drivers_Dataset.csv")   # TRUE if the file is in the working folder
 drivers <- read.csv(
   file = "F1Drivers_Dataset.csv",
   header = TRUE,
@@ -18,45 +18,61 @@ drivers <- read.csv(
   na.strings = c("", "NA"),
   fileEncoding = "UTF-8"
 )
-drivers <- tibble(drivers)
+drivers <- as_tibble(drivers)
 print(drivers)
 
-file.exists("F1Drivers_Dataset.csv")   # Comprobar si existe
-names(drivers)                         # Confirma que es Championship.Years
-dim(drivers)                           # Debe dar 868 filas y 22 columnas
+names(drivers)   # Check that the column is called Championship.Years (with a dot)
+dim(drivers)     # Should be 868 rows and 22 columns
+str(drivers)     # Check the type of each column
 
-#3
-drivers$Driver[drivers$Driver == "Karl-Günther Bechem[g]"] <- "Karl-Günther Bechem"
-drivers$Driver[drivers$Driver == "Max Jean[w]"] <- "Max Jean"
+#  3. CLEANING 
 
-drivers$Nationality[drivers$Nationality == "Monaco\u00a0Netherlands"] <- "Monaco, Netherlands"
-drivers$Nationality[drivers$Nationality == "Belgium\u00a0France"] <- "Belgium, France"
+# Text problems
+# Remove marks like [g] and [w] from driver names
+drivers$Driver <- str_remove(drivers$Driver, "\\[.*?\\]")
+# Replace the strange space (\u00a0) with a comma when a driver has two nationalities
+drivers$Nationality <- str_replace_all(drivers$Nationality, "\u00a0", ", ")
+# Change RAF to Russia
 drivers$Nationality[drivers$Nationality == "RAF"] <- "Russia"
 
-colSums(is.na(drivers)) #Vemos que la unica columna con NA es Championship.Years
+# Check that no brackets are left and that nationalities look correct
+grep("\\[|\\]", drivers$Driver, value = TRUE)   # Should be empty
+sort(unique(drivers$Nationality))
 
-sum(is.na(drivers$Championship.Years))   # 834 pilotos sin mundiales (NA)
-sum(!is.na(drivers$Championship.Years))  # 34 campeones con dato válido
+# Missing values
+colSums(is.na(drivers))   # Only Championship.Years has NA
 
-#CHecking that no other columns have suspicious values
-summary(drivers)#it looks like there isnt
+# Is the NA only for drivers with no titles? (should be TRUE)
+all(is.na(drivers$Championship.Years) == (drivers$Championships == 0))
+# Decision: we do NOT fill these NA. NA means "never won a championship".
 
-sum(duplicated(drivers))#no row is duplicated
-sum(duplicated(drivers$Driver))#no driver is duplicated
+setdiff(seq(min(drivers$Decade), max(drivers$Decade), by = 10), unique(drivers$Decade))
 
-tuk_wins <- boxplot(drivers$Race_Wins)
+# Check for impossible values (all of these should be 0)
+sum(drivers$Race_Starts > drivers$Race_Entries)
+sum(drivers$Race_Wins > drivers$Podiums)
+sum(drivers$Podiums > drivers$Race_Starts)
+sum(drivers$Points < 0)
+sum(drivers$Win_Rate < 0 | drivers$Win_Rate > 1)
+
+# Duplicates (both should be 0)
+sum(duplicated(drivers))
+sum(duplicated(drivers$Driver))
+
+# Outliers 
+tuk_wins <- boxplot(drivers$Race_Wins, main = "Race wins")
 tuk_wins$out
 
-numcols<-drivers[,sapply(drivers, is.numeric)]
+numcols <- drivers[, sapply(drivers, is.numeric)]
 
 for (col in names(numcols)) {
   outliers <- boxplot.stats(numcols[[col]])$out
-  print(paste(col, ":", length(outliers), "outliers"))#we check how many 
-  #outliers each numeric column has. a lot of outliers are normal, as most
-  #drivers have 0 championships, and a few have many. same with wins and points
+  print(paste(col, ":", length(outliers), "outliers"))
 }
+# Decision: we KEEP the outliers. They are real values: a few drivers
+# have many wins, points and championships, while most have very few.
 
-
+# Normalization of Points
 drivers_clean <- mutate(
   drivers,
   Points_minmax = (Points - min(Points)) / (max(Points) - min(Points)),
@@ -67,8 +83,9 @@ drivers_clean <- arrange(drivers_clean, desc(Championships), desc(Race_Wins))
 
 print(drivers_clean)
 
-# 1. Create a refined dataset of drivers who actually started at least one race
+# 3
 
+# Create a refined dataset of drivers who actually started at least one race
 drivers_transformed <- drivers_clean %>%
   filter(Race_Starts > 0) %>%
   select(
