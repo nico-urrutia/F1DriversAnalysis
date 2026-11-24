@@ -1,11 +1,12 @@
 #F1 DRIVERS PROJECT
 #PARTICIPANTS: Asier Barreira, Aitor Espin and Nicolas Urrutia
 
-install.packages(c("stringr","lubridate","tibble","dplyr"))
+#install.packages(c("stringr","lubridate","tibble","dplyr","ggplot2"))
 library(dplyr)
 library(stringr)
 library(lubridate)
 library(tibble)
+library(ggplot2)
 
 #2
 drivers <- read.csv(
@@ -19,6 +20,10 @@ drivers <- read.csv(
 )
 drivers <- tibble(drivers)
 print(drivers)
+
+file.exists("F1Drivers_Dataset.csv")   # Comprobar si existe
+names(drivers)                         # Confirma que es Championship.Years
+dim(drivers)                           # Debe dar 868 filas y 22 columnas
 
 #3
 drivers$Driver[drivers$Driver == "Karl-Günther Bechem[g]"] <- "Karl-Günther Bechem"
@@ -120,7 +125,7 @@ nationality_summary <- drivers_transformed %>%
 print(nationality_summary)
 
 
-#5 DATA EXPLORATION (aligned with Unit 3.3 slides)
+#5 DATA EXPLORATION
 
 # Non-visual exploration (Slide 6 & 7)
 str(drivers_transformed)
