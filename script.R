@@ -7,7 +7,10 @@ library(stringr)
 library(tibble)
 library(ggplot2)
 
-# 2. LOADING 
+
+# --- 2. LOADING --- 
+
+
 file.exists("F1Drivers_Dataset.csv")   # TRUE if the file is in the working folder
 drivers <- read.csv(
   file = "F1Drivers_Dataset.csv",
@@ -25,7 +28,9 @@ names(drivers)   # Check that the column is called Championship.Years (with a do
 dim(drivers)     # Should be 868 rows and 22 columns
 str(drivers)     # Check the type of each column
 
-#  3. CLEANING 
+
+#  --- 3. CLEANING ---
+
 
 # Text problems
 # Remove marks like [g] and [w] from driver names
@@ -83,7 +88,10 @@ drivers_clean <- arrange(drivers_clean, desc(Championships), desc(Race_Wins))
 
 print(drivers_clean)
 
-# 3
+# --- 4. DATA INTEGRATION (Skipped: single file used) ---
+
+# --- 5. TRANSFORMATION ---
+
 
 # Create a refined dataset of drivers who actually started at least one race
 drivers_transformed <- drivers_clean %>%
@@ -99,23 +107,20 @@ drivers_transformed <- drivers_clean %>%
     Champion         = (Champion == "True"),
     Start_Efficiency = round(Race_Starts / Race_Entries, 3),
     Points_Per_Start = round(Points / Race_Starts, 2),
-    Driver_Tier      = case_when(
-      Championships > 0 ~ "World Champion",
-      Race_Wins > 0     ~ "Race Winner",
-      Podiums > 0       ~ "Podium Finisher",
-      Points > 0        ~ "Points Scorer",
-      TRUE              ~ "No Points"
-    )
+    Driver_Tier      =  ifelse(Championships > 0, "World Champion",
+                               ifelse(Race_Wins > 0, "Race Winner",
+                                      ifelse(Podiums > 0, "Podium Finisher",
+                                             ifelse(Points > 0, "Points Scorer", "No Points"))))
   ) %>%
   arrange(desc(Championships), desc(Race_Wins), desc(Points))
 
 print(drivers_transformed)
 
-# 2. Aggregate statistics by Decade 
+# Aggregate statistics by Decade 
 decade_summary <- drivers_transformed %>%
   group_by(Decade) %>%
   summarise(
-    Total_Drivers    = n(),
+    Total_Drivers    = sum(!is.na(Driver)),
     Total_Champions  = sum(Champion, na.rm = TRUE),
     Avg_Race_Starts  = round(mean(Race_Starts, na.rm = TRUE), 1),
     Total_Wins       = sum(Race_Wins, na.rm = TRUE),
@@ -126,7 +131,7 @@ decade_summary <- drivers_transformed %>%
 
 print(decade_summary)
 
-# 3. Aggregate performance by Nationality
+# Aggregate performance by Nationality
 nationality_summary <- drivers_transformed %>%
   group_by(Nationality) %>%
   summarise(
@@ -142,9 +147,9 @@ nationality_summary <- drivers_transformed %>%
 print(nationality_summary)
 
 
-#5 DATA EXPLORATION
+# --- 6. DATA EXPLORATION ---
 
-# Non-visual exploration (Slide 6 & 7)
+# Non-visual exploration
 str(drivers_transformed)
 summary(drivers_transformed)
 cor(drivers_transformed$Race_Starts, drivers_transformed$Podiums)
