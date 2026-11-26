@@ -146,6 +146,13 @@ nationality_summary <- drivers_transformed %>%
 
 print(nationality_summary)
 
+# Join the data of each pilot with the resume of the decade 
+drivers_transformed <- full_join(drivers_transformed, decade_summary, by = "Decade") %>%
+  mutate(
+    Points_vs_Decade_Avg = round(Points_Per_Start - Avg_Points_Start, 2)
+  )
+print(drivers_transformed)
+
 
 # --- 6. DATA EXPLORATION ---
 
