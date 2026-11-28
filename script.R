@@ -156,22 +156,94 @@ print(drivers_transformed)
 
 # --- 6. DATA EXPLORATION ---
 
-# Non-visual exploration
+# ==============================================================================
+# 6.1 NON-VISUAL EXPLORATION & CORRELATIONS
+# ==============================================================================
+
 str(drivers_transformed)
 summary(drivers_transformed)
-cor(drivers_transformed$Race_Starts, drivers_transformed$Podiums)
-cor(drivers_transformed$Race_Wins, drivers_transformed$Points)
 
-# Visual exploration
-hist(drivers_transformed$Years_Active,
-     main = "Distribution of F1 Drivers' Years Active",
-     xlab = "Years Active", col = "lightblue")
+# Correlation matrix for key numeric performance metrics
+cor_matrix <- drivers_transformed %>%
+  select(Years_Active, Race_Starts, Pole_Positions, Race_Wins, Podiums, Points) %>%
+  cor(use = "complete.obs")
+
+print(round(cor_matrix, 3))
+
+# Key pairwise correlations
+cor(drivers_transformed$Race_Starts, drivers_transformed$Podiums)      # Experience vs. Podiums
+cor(drivers_transformed$Pole_Positions, drivers_transformed$Race_Wins) # Qualifying vs. Wins
+cor(drivers_transformed$Race_Wins, drivers_transformed$Points)         # Wins vs. Points
 
 
-ggplot(drivers_transformed, aes(x = Race_Starts, y = Podiums, color = Driver_Tier)) +
-  geom_point(alpha = 0.7) +
+# 6.2 VISUAL EXPLORATION 
+
+
+# GRAPH 1 (Histogram): Distribution of F1 Drivers' Career Length
+ggplot(drivers_transformed, aes(x = Years_Active)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "white", alpha = 0.9) +
   labs(
-    title = "Race Starts vs. Podiums by Driver Tier",
-    x = "Race Starts",
-    y = "Podiums"
-  )
+    title    = "Distribution of F1 Drivers' Years Active",
+    subtitle = "Most drivers compete for only 1 to 3 seasons",
+    x        = "Years Active",
+    y        = "Number of Drivers"
+  ) +
+  theme_light()
+
+
+# GRAPH 2: Race Starts vs. Podiums by Driver Tier
+ggplot(drivers_transformed, aes(x = Race_Starts, y = Podiums, color = Driver_Tier)) +
+  geom_point(alpha = 0.75, size = 2.5) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed", color = "gray35") +
+  labs(
+    title    = "Race Starts vs. Podiums by Driver Tier",
+    subtitle = "Strong positive linear correlation, driven primarily by World Champions",
+    x        = "Race Starts",
+    y        = "Total Podiums",
+    color    = "Driver Tier"
+  ) +
+  theme_minimal()
+
+
+# GRAPH 3: Top 10 Nationalities by Total Race Wins
+nationality_summary %>%
+  slice_max(order_by = Total_Wins, n = 10) %>%
+  ggplot(aes(x = reorder(Nationality, Total_Wins), y = Total_Wins)) +
+  geom_col(fill = "firebrick", alpha = 0.85) +
+  coord_flip() +
+  labs(
+    title    = "Top 10 F1 Nationalities by Total Race Wins",
+    subtitle = "Historical dominance is heavily concentrated in a few countries",
+    x        = "Nationality",
+    y        = "Total Race Wins"
+  ) +
+  theme_minimal()
+
+
+# GRAPH 4: Podium Rate Distribution Across Successful Driver Tiers
+drivers_transformed %>%
+  filter(Podiums > 0) %>%
+  ggplot(aes(x = reorder(Driver_Tier, Podium_Rate, FUN = median), y = Podium_Rate, fill = Driver_Tier)) +
+  geom_boxplot(alpha = 0.8, show.legend = FALSE) +
+  labs(
+    title    = "Podium Rate Distribution Across Driver Tiers",
+    subtitle = "Comparing drivers with at least 1 podium finish (controls for career length)",
+    x        = "Driver Tier",
+    y        = "Podium Rate (Podiums / Race Starts)"
+  ) +
+  theme_minimal()
+
+
+# GRAPH 5: Evolution of Average Points per Start by Decade
+ggplot(decade_summary, aes(x = Decade, y = Avg_Points_Start)) +
+  geom_line(color = "darkgreen", linewidth = 1.2) +
+  geom_point(color = "darkgreen", size = 3) +
+  scale_x_continuous(breaks = decade_summary$Decade) +
+  labs(
+    title    = "Evolution of Average Points per Start by Decade",
+    subtitle = "Sharp surge starting in the 2010s due to FIA scoring system changes",
+    x        = "Decade",
+    y        = "Average Points per Start"
+  ) +
+  theme_minimal()
+
